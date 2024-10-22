@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Random Variable and Probability Distribution Explorer</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f0f4f8;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            width: 90%;
+            max-width: 800px;
+        }
+        h1, h2 {
+            color: #2c3e50;
+            text-align: center;
+        }
+        .sample-space, .distribution {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin: 20px 0;
+        }
+        .element {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 3px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: bold;
+            color: white;
+            font-size: 12px;
+        }
+        .element:hover {
+            transform: scale(1.1);
+        }
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        input, select, button {
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin: 5px;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        .distribution-chart {
+            display: flex;
+            align-items: flex-end;
+            height: 200px;
+            border-bottom: 2px solid #34495e;
+            padding-top: 20px;
+            position: relative;
+        }
+        .bar {
+            flex: 1;
+            background-color: #3498db;
+            margin: 0 2px;
+            transition: all 0.5s ease;
+            position: relative;
+        }
+        .bar-label {
+            position: absolute;
+            bottom: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 12px;
+        }
+        .axis {
+            position: absolute;
+            background-color: #34495e;
+        }
+        .x-axis {
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+        }
+        .y-axis {
+            top: 0;
+            bottom: 0;
+            left: 0;
+            width: 2px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Advanced Random Variable Explorer</h1>
+        
+        <h2>Sample Space</h2>
+        <div class="sample-space" id="sampleSpace"></div>
+        
+        <div class="controls">
+            <input type="number" id="sampleSize" placeholder="Sample size" value="50">
+            <button onclick="generateSampleSpace()">Generate Random</button>
+            <input type="text" id="specificElement" placeholder="Add specific element">
+            <button onclick="addSpecificElement()">Add Element</button>
+            <select id="functionSelect">
+                <option value="identity">Identity</option>
+                <option value="square">Square</option>
+                <option value="double">Double</option>
+                <option value="modulo3">Modulo 3</option>
+                <option value="custom">Custom</option>
+            </select>
+            <input type="text" id="customFunction" placeholder="e.g., x^2-2x+1" style="display:none;">
+        </div>
+        
+        <h2>Probability Distribution</h2>
+        <div class="distribution-chart" id="distributionChart">
+            <div class="x-axis axis"></div>
+            <div class="y-axis axis"></div>
+        </div>
+    </div>
+
+    <script>
+        let sampleSpace = [];
+        let currentFunction = x => x;
+
+        function generateSampleSpace() {
+            const size = parseInt(document.getElementById('sampleSize').value) || 50;
+            sampleSpace = Array.from({length: size}, () => Math.floor(Math.random() * 10) + 1);
+            updateSampleSpace();
+        }
+
+        function addSpecificElement() {
+            const element = parseInt(document.getElementById('specificElement').value);
+            if (!isNaN(element)) {
+                sampleSpace.push(element);
+                updateSampleSpace();
+                document.getElementById('specificElement').value = '';
+            }
+        }
+
+        function updateSampleSpace() {
+            const sampleSpaceElement = document.getElementById('sampleSpace');
+            sampleSpaceElement.innerHTML = '';
+            sampleSpace.forEach((value, index) => {
+                const element = document.createElement('div');
+                element.className = 'element';
+                element.style.backgroundColor = getColor(value);
+                element.textContent = value;
+                sampleSpaceElement.appendChild(element);
+            });
+            updateDistribution();
+        }
+
+        function getColor(value) {
+            const hue = (value * 36) % 360;
+            return `hsl(${hue}, 70%, 60%)`;
+        }
+
+        function updateDistribution() {
+            const distributionChart = document.getElementById('distributionChart');
+            distributionChart.innerHTML = '<div class="x-axis axis"></div><div class="y-axis axis"></div>';
+            
+            const distribution = {};
+            sampleSpace.forEach(value => {
+                const result = currentFunction(value);
+                distribution[result] = (distribution[result] || 0) + 1;
+            });
+
+            const totalCount = sampleSpace.length;
+            const entries = Object.entries(distribution).sort((a, b) => a[0] - b[0]);
+            
+            entries.forEach(([value, count], index) => {
+                const bar = document.createElement('div');
+                bar.className = 'bar';
+                const height = (count / totalCount) * 100;
+                bar.style.height = '0%';
+                bar.style.opacity = '0';
+                
+                const label = document.createElement('div');
+                label.className = 'bar-label';
+                label.textContent = `${value}: ${count}`;
+                
+                bar.appendChild(label);
+                distributionChart.appendChild(bar);
+
+                setTimeout(() => {
+                    bar.style.height = `${height}%`;
+                    bar.style.opacity = '1';
+                }, 50 * index);
+            });
+        }
+
+        function parseCustomFunction(funcString) {
+            // This is a simple parser and doesn't handle all cases
+            return new Function('x', `return ${funcString.replace(/\^/g, '**')}`);
+        }
+
+        document.getElementById('functionSelect').addEventListener('change', (e) => {
+            const customFunctionInput = document.getElementById('customFunction');
+            if (e.target.value === 'custom') {
+                customFunctionInput.style.display = 'inline-block';
+            } else {
+                customFunctionInput.style.display = 'none';
+            }
+
+            switch(e.target.value) {
+                case 'identity':
+                    currentFunction = x => x;
+                    break;
+                case 'square':
+                    currentFunction = x => x * x;
+                    break;
+                case 'double':
+                    currentFunction = x => x * 2;
+                    break;
+                case 'modulo3':
+                    currentFunction = x => x % 3;
+                    break;
+                case 'custom':
+                    currentFunction = parseCustomFunction(customFunctionInput.value);
+                    break;
+            }
+            updateDistribution();
+        });
+
+        document.getElementById('customFunction').addEventListener('input', (e) => {
+            currentFunction = parseCustomFunction(e.target.value);
+            updateDistribution();
+        });
+
+        generateSampleSpace();
+    </script>
+</body>
+</html>
